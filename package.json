@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:ankixd": "next build",
     "start": "next start --hostname 127.0.0.1",
     "lint": "eslint"
   },
