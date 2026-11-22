@@ -163,7 +163,7 @@ export function ReviewSession({
         <div className="flex flex-1 flex-col gap-5">
           <div className="flex flex-col gap-4 rounded-xl bg-card p-4 ring-1 ring-foreground/10">
             {current.front.length > 0 ? (
-              current.front.map((field) => <FieldView key={field.name} field={field} />)
+              current.front.map((field, index) => <FieldView key={field.name} field={field} prominent={index === 0} />)
             ) : (
               <p className="text-muted-foreground">На лице карточки пусто</p>
             )}
@@ -173,7 +173,9 @@ export function ReviewSession({
             {revealed ? (
               <div className="flex flex-col gap-4 border-t pt-4">
                 {current.back.length > 0 ? (
-                  current.back.map((field) => <FieldView key={field.name} field={field} />)
+                  current.back.map((field, index) => (
+                    <FieldView key={field.name} field={field} prominent={index === 0} />
+                  ))
                 ) : (
                   <p className="text-muted-foreground">На обороте пусто</p>
                 )}
@@ -207,7 +209,9 @@ export function ReviewSession({
               Отменить последний ответ
             </button>
           ) : null}
-          <p className="text-xs text-muted-foreground">Пробел показывает ответ. Затем 1 — не вспомнил, 2 — вспомнил.</p>
+          <p className="hidden text-xs text-muted-foreground sm:block">
+            Пробел показывает ответ. Затем 1 — не вспомнил, 2 — вспомнил.
+          </p>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
