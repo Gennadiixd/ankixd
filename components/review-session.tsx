@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Layers } from "lucide-react";
+import { Eye, Layers, Shuffle, Undo2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FieldView } from "@/components/field-view";
 import { Button } from "@/components/ui/button";
@@ -135,6 +135,20 @@ export function ReviewSession({
     }
   }
 
+  function shuffleQueue() {
+    setRevealed(false);
+    setQueue((items) => {
+      const copy = [...items];
+      for (let index = copy.length - 1; index > 0; index -= 1) {
+        const swap = Math.floor(Math.random() * (index + 1));
+        const currentItem = copy[index];
+        copy[index] = copy[swap];
+        copy[swap] = currentItem;
+      }
+      return copy;
+    });
+  }
+
   const nearest = deferred.reduce((min, item) => Math.min(min, item.dueAt), Number.POSITIVE_INFINITY);
 
   return (
@@ -194,20 +208,43 @@ export function ReviewSession({
                 <span>Не вспомнил</span>
                 <span className="text-xs opacity-80">{preview?.again ?? "…"}</span>
               </Button>
-              <Button type="button" className="h-16 flex-col gap-0" onClick={() => void grade(3)}>
+              <Button type="button" variant="success" className="h-16 flex-col gap-0" onClick={() => void grade(3)}>
                 <span>Вспомнил</span>
                 <span className="text-xs opacity-80">{preview?.good ?? "…"}</span>
               </Button>
             </div>
           ) : (
             <Button type="button" variant="outline" className="h-12" onClick={() => setRevealed(true)}>
+              <Eye aria-hidden />
               Показать ответ
             </Button>
           )}
-          {undo ? (
-            <button type="button" className="text-sm text-muted-foreground underline" onClick={() => void undoLast()}>
+          {undo && queue.length > 1 ? (
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-auto min-h-12 whitespace-normal px-3 py-2 text-center leading-tight"
+                onClick={() => void undoLast()}
+              >
+                <Undo2 aria-hidden />
+                Отменить последний ответ
+              </Button>
+              <Button type="button" variant="outline" className="h-12" onClick={shuffleQueue}>
+                <Shuffle aria-hidden />
+                Перемешать
+              </Button>
+            </div>
+          ) : undo ? (
+            <Button type="button" variant="outline" className="h-12" onClick={() => void undoLast()}>
+              <Undo2 aria-hidden />
               Отменить последний ответ
-            </button>
+            </Button>
+          ) : queue.length > 1 ? (
+            <Button type="button" variant="outline" className="h-12" onClick={shuffleQueue}>
+              <Shuffle aria-hidden />
+              Перемешать очередь
+            </Button>
           ) : null}
           <p className="hidden text-xs text-muted-foreground sm:block">
             Пробел показывает ответ. Затем 1 — не вспомнил, 2 — вспомнил.
