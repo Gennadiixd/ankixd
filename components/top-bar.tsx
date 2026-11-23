@@ -11,8 +11,8 @@ export function TopBar({ name }: { name: string }) {
 
   return (
     <>
-      <div className="h-9" />
-      <div className="fixed inset-x-0 top-0 z-50">
+      <div className="h-[calc(2.25rem+env(safe-area-inset-top))]" />
+      <div className="fixed inset-x-0 top-0 z-50 pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex w-full max-w-lg items-center justify-between gap-2 bg-background/90 px-2 py-1 backdrop-blur-sm">
           {back ? (
             <Link href={back} className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "px-2")}>

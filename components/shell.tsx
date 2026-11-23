@@ -2,7 +2,11 @@ export const controlClass =
   "h-10 w-full rounded-lg border border-input bg-background px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50";
 
 export function Shell({ children }: { children: React.ReactNode }) {
-  return <div className="mx-auto flex w-full max-w-lg flex-col gap-6 px-4 pt-2 pb-6">{children}</div>;
+  return (
+    <div className="mx-auto flex w-full max-w-lg flex-col gap-6 px-4 pt-2 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+      {children}
+    </div>
+  );
 }
 
 export function PageHeader({
