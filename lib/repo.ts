@@ -41,6 +41,7 @@ export type DeckSummary = {
   name: string;
   newCount: number;
   dueCount: number;
+  suspendedCount: number;
   cardCount: number;
 };
 
@@ -57,6 +58,7 @@ export type CardSummary = {
   id: number;
   state: number;
   dueAt: string;
+  suspended: boolean;
   preview: string;
   tags: string[];
 };
@@ -117,8 +119,9 @@ export async function listHome() {
   const rows = getDb()
     .prepare(
       `SELECT d.id, d.folder_id AS folderId, d.name,
-              COALESCE(SUM(CASE WHEN c.state = 0 THEN 1 ELSE 0 END), 0) AS newCount,
-              COALESCE(SUM(CASE WHEN c.id IS NOT NULL AND c.state != 0 AND c.due_at <= ? THEN 1 ELSE 0 END), 0) AS dueCount,
+              COALESCE(SUM(CASE WHEN c.suspended = 0 AND c.state = 0 THEN 1 ELSE 0 END), 0) AS newCount,
+              COALESCE(SUM(CASE WHEN c.suspended = 0 AND c.id IS NOT NULL AND c.state != 0 AND c.due_at <= ? THEN 1 ELSE 0 END), 0) AS dueCount,
+              COALESCE(SUM(CASE WHEN c.suspended = 1 THEN 1 ELSE 0 END), 0) AS suspendedCount,
               COUNT(c.id) AS cardCount
        FROM decks d
        LEFT JOIN cards c ON c.deck_id = d.id
@@ -494,9 +497,10 @@ export async function getDeckPage(deckId: number) {
   const fields = listFieldRows(deckId).map(toFieldItem);
   const tags = getDb()
     .prepare(
-      `SELECT t.name, COUNT(ct.card_id) AS cardCount
+      `SELECT t.name, COUNT(c.id) AS cardCount
        FROM tags t
        LEFT JOIN card_tags ct ON ct.tag_id = t.id
+       LEFT JOIN cards c ON c.id = ct.card_id AND c.suspended = 0
        WHERE t.deck_id = ?
        GROUP BY t.id
        ORDER BY t.name COLLATE NOCASE`,
@@ -504,7 +508,7 @@ export async function getDeckPage(deckId: number) {
     .all(deckId) as TagItem[];
   const rows = getDb()
     .prepare(
-      `SELECT c.id, c.state, c.due_at AS dueAt,
+      `SELECT c.id, c.state, c.suspended, c.due_at AS dueAt,
               (SELECT cv.value
                FROM card_values cv
                JOIN fields f ON f.id = cv.field_id
@@ -515,12 +519,13 @@ export async function getDeckPage(deckId: number) {
        WHERE c.deck_id = ?
        ORDER BY c.id`,
     )
-    .all(deckId) as { id: number; state: number; dueAt: string; preview: string | null }[];
+    .all(deckId) as { id: number; state: number; suspended: number; dueAt: string; preview: string | null }[];
   const tagMap = loadTags(rows.map((row) => row.id));
   const cards: CardSummary[] = rows.map((row) => ({
     id: row.id,
     state: row.state,
     dueAt: row.dueAt,
+    suspended: row.suspended === 1,
     preview: cardPreview(row.preview ?? "") || "Пустая карточка",
     tags: tagMap.get(row.id) ?? [],
   }));
@@ -530,8 +535,9 @@ export async function getDeckPage(deckId: number) {
     tags,
     cards,
     folders: await listFolders(),
-    newCount: cards.filter((card) => card.state === 0).length,
-    dueCount: cards.filter((card) => card.state !== 0 && card.dueAt <= now).length,
+    newCount: cards.filter((card) => !card.suspended && card.state === 0).length,
+    dueCount: cards.filter((card) => !card.suspended && card.state !== 0 && card.dueAt <= now).length,
+    suspendedCount: cards.filter((card) => card.suspended).length,
   };
 }
 
@@ -567,28 +573,32 @@ export async function getNewCardPage(deckId: number) {
   };
 }
 
-export async function getReviewSession(deckId: number, tags: string[]) {
+export async function getReviewSession(deckId: number, tags: string[], suspended = false) {
   const deck = await findDeck(deckId);
   if (!deck) return null;
   const now = new Date().toISOString();
   const order = `ORDER BY CASE c.state WHEN 1 THEN 0 WHEN 3 THEN 0 WHEN 2 THEN 1 ELSE 2 END, c.due_at, c.id`;
   const rows = (
-    tags.length === 0
+    suspended
       ? getDb()
-          .prepare(`SELECT c.id FROM cards c WHERE c.deck_id = ? AND c.due_at <= ? ${order}`)
-          .all(deckId, now)
-      : getDb()
-          .prepare(
-            `SELECT c.id FROM cards c
-             WHERE c.deck_id = ? AND c.due_at <= ?
-             AND EXISTS (
-               SELECT 1 FROM card_tags ct
-               JOIN tags t ON t.id = ct.tag_id
-               WHERE ct.card_id = c.id AND t.name IN (${tags.map(() => "?").join(",")})
-             )
-             ${order}`,
-          )
-          .all(deckId, now, ...tags)
+          .prepare(`SELECT c.id FROM cards c WHERE c.deck_id = ? AND c.suspended = 1 ${order}`)
+          .all(deckId)
+      : tags.length === 0
+        ? getDb()
+            .prepare(`SELECT c.id FROM cards c WHERE c.deck_id = ? AND c.suspended = 0 AND c.due_at <= ? ${order}`)
+            .all(deckId, now)
+        : getDb()
+            .prepare(
+              `SELECT c.id FROM cards c
+               WHERE c.deck_id = ? AND c.suspended = 0 AND c.due_at <= ?
+               AND EXISTS (
+                 SELECT 1 FROM card_tags ct
+                 JOIN tags t ON t.id = ct.tag_id
+                 WHERE ct.card_id = c.id AND t.name IN (${tags.map(() => "?").join(",")})
+               )
+               ${order}`,
+            )
+            .all(deckId, now, ...tags)
   ) as { id: number }[];
   const fields = listFieldRows(deckId);
   const values = loadValues(rows.map((row) => row.id));
@@ -603,6 +613,19 @@ export async function getReviewSession(deckId: number, tags: string[]) {
     deck: { id: deck.id, name: deck.name },
     cards,
   };
+}
+
+export async function setCardSuspended(cardId: number, suspended: boolean) {
+  const card = await requireCard(cardId);
+  getDb()
+    .prepare(`UPDATE cards SET suspended = ? WHERE id = ?`)
+    .run(suspended ? 1 : 0, card.id);
+  return card.deck_id;
+}
+
+export async function unsuspendDeck(deckId: number) {
+  await requireDeck(deckId);
+  getDb().prepare(`UPDATE cards SET suspended = 0 WHERE deck_id = ? AND suspended = 1`).run(deckId);
 }
 
 export async function reviewCard(cardId: number, rating: 1 | 3) {

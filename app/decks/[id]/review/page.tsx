@@ -16,7 +16,7 @@ export default function ReviewPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tags?: string }>;
+  searchParams: Promise<{ tags?: string; suspended?: string }>;
 }) {
   return (
     <Suspense fallback={<Loading />}>
@@ -30,17 +30,18 @@ async function ReviewBody({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tags?: string }>;
+  searchParams: Promise<{ tags?: string; suspended?: string }>;
 }) {
   await connection();
   const { id: rawId } = await params;
-  const { tags: rawTags } = await searchParams;
+  const { tags: rawTags, suspended: rawSuspended } = await searchParams;
   const id = Number(rawId);
   if (!Number.isInteger(id)) notFound();
-  const tags = parseTagList(rawTags ?? "");
-  const session = await getReviewSession(id, tags);
+  const suspended = rawSuspended === "1";
+  const tags = suspended ? [] : parseTagList(rawTags ?? "");
+  const session = await getReviewSession(id, tags, suspended);
   if (!session) notFound();
-  const tagLabel = tags.length > 0 ? tags.join(", ") : undefined;
+  const tagLabel = suspended ? "отложенные" : tags.length > 0 ? tags.join(", ") : undefined;
 
   if (session.cards.length === 0) {
     return (
@@ -50,7 +51,7 @@ async function ReviewBody({
           icon={<Layers className="size-6" aria-hidden />}
           hint={tagLabel}
         />
-        <p>Сейчас нечего повторять.</p>
+        <p>{suspended ? "Отложенных карточек нет." : "Сейчас нечего повторять."}</p>
         <Link href={`/decks/${id}`} className={cn(buttonVariants(), "h-10")}>
           К колоде
         </Link>
@@ -64,6 +65,7 @@ async function ReviewBody({
       deckName={session.deck.name}
       tagLabel={tagLabel}
       initialCards={session.cards}
+      suspended={suspended}
     />
   );
 }

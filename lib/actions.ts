@@ -40,6 +40,7 @@ function fieldValues(formData: FormData) {
 function refreshDeck(deckId: number) {
   revalidatePath("/");
   revalidatePath(`/decks/${deckId}`);
+  revalidatePath(`/decks/${deckId}/review`);
 }
 
 export async function createFolder(formData: FormData) {
@@ -214,6 +215,38 @@ export async function importDeck(formData: FormData) {
     fail("/import", error);
   }
   revalidatePath("/");
+  redirect(`/decks/${deckId}`);
+}
+
+export async function suspendCard(cardId: number) {
+  const deckId = await repo.setCardSuspended(cardId, true);
+  refreshDeck(deckId);
+}
+
+export async function unsuspendCard(cardId: number) {
+  const deckId = await repo.setCardSuspended(cardId, false);
+  refreshDeck(deckId);
+}
+
+export async function suspendCardForm(formData: FormData) {
+  const deckId = requiredId(formData, "deckId");
+  try {
+    await repo.setCardSuspended(requiredId(formData, "cardId"), formData.get("suspended") !== "0");
+  } catch (error) {
+    fail(`/decks/${deckId}`, error);
+  }
+  refreshDeck(deckId);
+  redirect(`/decks/${deckId}`);
+}
+
+export async function unsuspendDeck(formData: FormData) {
+  const deckId = requiredId(formData, "deckId");
+  try {
+    await repo.unsuspendDeck(deckId);
+  } catch (error) {
+    fail(`/decks/${deckId}`, error);
+  }
+  refreshDeck(deckId);
   redirect(`/decks/${deckId}`);
 }
 

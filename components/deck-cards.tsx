@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Pencil } from "lucide-react";
+import { ArchiveRestore, Pause, Pencil } from "lucide-react";
 import { ConfirmForm } from "@/components/confirm-form";
-import { buttonVariants } from "@/components/ui/button";
-import { deleteCard } from "@/lib/actions";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { deleteCard, suspendCardForm } from "@/lib/actions";
 import { formatInterval } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +12,7 @@ type CardRow = {
   id: number;
   state: number;
   dueAt: string;
+  suspended: boolean;
   preview: string;
   tags: string[];
 };
@@ -36,6 +37,20 @@ export function DeckCards({ deckId, cards }: { deckId: number; cards: CardRow[] 
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2.5">
+            <form action={suspendCardForm}>
+              <input type="hidden" name="deckId" value={deckId} />
+              <input type="hidden" name="cardId" value={card.id} />
+              <input type="hidden" name="suspended" value={card.suspended ? "0" : "1"} />
+              <Button
+                type="submit"
+                variant="outline"
+                size="icon"
+                aria-label={card.suspended ? "Вернуть в колоду" : "Отложить"}
+                title={card.suspended ? "Вернуть в колоду" : "Отложить"}
+              >
+                {card.suspended ? <ArchiveRestore /> : <Pause />}
+              </Button>
+            </form>
             <Link
               href={`/decks/${deckId}/cards/${card.id}`}
               prefetch={false}
@@ -60,6 +75,7 @@ export function DeckCards({ deckId, cards }: { deckId: number; cards: CardRow[] 
 
 function cardStatus(card: CardRow) {
   const now = new Date();
+  if (card.suspended) return "отложена";
   if (card.state === 0) return "новая";
   if (card.dueAt <= now.toISOString()) return "к повторению";
   return `через ${formatInterval(now, card.dueAt)}`;

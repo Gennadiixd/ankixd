@@ -7,6 +7,7 @@ import Loading from "@/app/loading";
 import { DeckCards } from "@/components/deck-cards";
 import { DeckMenu } from "@/components/deck-menu";
 import { FormError, PageHeader, SectionTitle, Shell } from "@/components/shell";
+import { SuspendedDeckActions } from "@/components/suspended-deck";
 import { TagStudy } from "@/components/tag-study";
 import { getDeckPage } from "@/lib/repo";
 import { buttonVariants } from "@/components/ui/button";
@@ -40,7 +41,7 @@ async function DeckBody({
   if (!Number.isInteger(id)) notFound();
   const page = await getDeckPage(id);
   if (!page) notFound();
-  const { deck, fields, tags, cards, folders, newCount, dueCount } = page;
+  const { deck, fields, tags, cards, folders, newCount, dueCount, suspendedCount } = page;
 
   return (
     <Shell>
@@ -58,6 +59,7 @@ async function DeckBody({
         </Link>
         {tags.length > 0 ? <TagStudy deckId={deck.id} tags={tags} /> : null}
       </div>
+      <SuspendedDeckActions deckId={deck.id} count={suspendedCount} />
 
       <section className="flex flex-col gap-1">
         <div className="mb-1 flex items-center justify-between">

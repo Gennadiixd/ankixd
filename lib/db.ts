@@ -119,5 +119,9 @@ function migrate(db: Database.Database) {
     (db.prepare(`PRAGMA table_info(users)`).all() as { name: string }[]).map((column) => column.name),
   );
   if (!columns.has("password_hash")) db.exec(`ALTER TABLE users ADD COLUMN password_hash TEXT`);
+  const cardColumns = new Set(
+    (db.prepare(`PRAGMA table_info(cards)`).all() as { name: string }[]).map((column) => column.name),
+  );
+  if (!cardColumns.has("suspended")) db.exec(`ALTER TABLE cards ADD COLUMN suspended INTEGER NOT NULL DEFAULT 0`);
   db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_name ON users(name COLLATE NOCASE)`);
 }

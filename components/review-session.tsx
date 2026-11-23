@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { Eye, Layers, Shuffle, Undo2 } from "lucide-react";
+import { ArchiveRestore, Eye, Layers, Pause, Shuffle, Undo2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FieldView } from "@/components/field-view";
 import { Button } from "@/components/ui/button";
-import { gradePreview, reviewCard, undoReview } from "@/lib/actions";
+import { gradePreview, reviewCard, suspendCard, undoReview, unsuspendCard } from "@/lib/actions";
 import { formatInterval } from "@/lib/format";
 import type { GradePreview, SessionCard } from "@/lib/types";
 import { buttonVariants } from "@/components/ui/button";
@@ -18,11 +18,13 @@ export function ReviewSession({
   deckName,
   tagLabel,
   initialCards,
+  suspended = false,
 }: {
   deckId: number;
   deckName: string;
   tagLabel?: string;
   initialCards: SessionCard[];
+  suspended?: boolean;
 }) {
   const [queue, setQueue] = useState(initialCards);
   const [deferred, setDeferred] = useState<{ dueAt: number; card: SessionCard }[]>([]);
@@ -132,6 +134,25 @@ export function ReviewSession({
       setError(caught instanceof Error ? caught.message : "Не удалось отменить ответ");
     } finally {
       setPending(false);
+    }
+  }
+
+  async function parkCurrent() {
+    if (!current || saving.current.has(current.id)) return;
+    const card = current;
+    saving.current.add(card.id);
+    setError(null);
+    setRevealed(false);
+    setQueue((items) => items.filter((item) => item.id !== card.id));
+    setDeferred((items) => items.filter((item) => item.card.id !== card.id));
+    try {
+      if (suspended) await unsuspendCard(card.id);
+      else await suspendCard(card.id);
+    } catch (caught) {
+      setQueue((items) => [card, ...items.filter((item) => item.id !== card.id)]);
+      setError(caught instanceof Error ? caught.message : suspended ? "Не удалось вернуть карточку" : "Не удалось отложить карточку");
+    } finally {
+      saving.current.delete(card.id);
     }
   }
 
@@ -246,6 +267,10 @@ export function ReviewSession({
               Перемешать очередь
             </Button>
           ) : null}
+          <Button type="button" variant="outline" className="h-12" onClick={() => void parkCurrent()}>
+            {suspended ? <ArchiveRestore aria-hidden /> : <Pause aria-hidden />}
+            {suspended ? "Вернуть в колоду" : "Отложить"}
+          </Button>
           <p className="hidden text-xs text-muted-foreground sm:block">
             Пробел показывает ответ. Затем 1 — не вспомнил, 2 — вспомнил.
           </p>
@@ -257,7 +282,7 @@ export function ReviewSession({
             <p className="text-sm text-muted-foreground">
               {nearest - now <= SHORT_WAIT_MS
                 ? `Следующая карточка из этой сессии через ${formatInterval(new Date(now), nearest)}. Она откроется сама.`
-                : `Ближайшая отложенная карточка через ${formatInterval(new Date(now), nearest)}. Её срок виден в колоде.`}
+                : `Ближайшая карточка вне этой сессии через ${formatInterval(new Date(now), nearest)}. Её срок виден в колоде.`}
             </p>
           ) : (
             <p className="text-sm text-muted-foreground">В этой очереди карточек больше нет.</p>

@@ -95,7 +95,7 @@ function DeckLink({
   folders,
   fields,
 }: {
-  deck: { id: number; name: string; folderId: number | null; dueCount: number; newCount: number; cardCount: number };
+  deck: { id: number; name: string; folderId: number | null; dueCount: number; newCount: number; suspendedCount: number; cardCount: number };
   folders: { id: number; name: string }[];
   fields: { id: number; name: string; kind: "text" | "rich-text"; side: "front" | "back" | "both" }[];
 }) {
@@ -108,7 +108,8 @@ function DeckLink({
           <div className="mt-1 text-sm text-muted-foreground">
             {deck.dueCount > 0 ? <span className="font-medium text-foreground">{deck.dueCount} к повторению</span> : null}
             {deck.dueCount > 0 ? " · " : null}
-            {deck.newCount} новых · {deck.cardCount} всего
+            {deck.newCount} новых
+            {deck.suspendedCount > 0 ? ` · отложено ${deck.suspendedCount}` : ""} · {deck.cardCount} всего
           </div>
         </div>
       </Link>
