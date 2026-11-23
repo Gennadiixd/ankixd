@@ -1,13 +1,13 @@
 import Link from "next/link";
-import { Layers } from "lucide-react";
+import { Layers, Plus } from "lucide-react";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import Loading from "@/app/loading";
 import { DeckCards } from "@/components/deck-cards";
 import { DeckMenu } from "@/components/deck-menu";
-import { FormError, PageHeader, SectionTitle, Shell } from "@/components/shell";
-import { SuspendedDeckActions } from "@/components/suspended-deck";
+import { FormError, PageHeader, Shell } from "@/components/shell";
+import { DeckListSummary } from "@/components/suspended-deck";
 import { TagStudy } from "@/components/tag-study";
 import { getDeckPage } from "@/lib/repo";
 import { buttonVariants } from "@/components/ui/button";
@@ -59,12 +59,12 @@ async function DeckBody({
         </Link>
         {tags.length > 0 ? <TagStudy deckId={deck.id} tags={tags} /> : null}
       </div>
-      <SuspendedDeckActions deckId={deck.id} count={suspendedCount} />
 
       <section className="flex flex-col gap-1">
-        <div className="mb-1 flex items-center justify-between">
-          <SectionTitle>Карточки</SectionTitle>
+        <div className="mb-1 flex items-start justify-between gap-3">
+          <DeckListSummary total={cards.length} suspended={suspendedCount} />
           <Link href={`/decks/${deck.id}/cards/new`} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+            <Plus aria-hidden />
             Новая
           </Link>
         </div>

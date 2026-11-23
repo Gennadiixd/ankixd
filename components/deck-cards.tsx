@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArchiveRestore, Pause, Pencil } from "lucide-react";
 import { ConfirmForm } from "@/components/confirm-form";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { SuspendedDeckActions } from "@/components/suspended-deck";
 import { deleteCard, suspendCardForm } from "@/lib/actions";
 import { formatInterval } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -22,11 +23,20 @@ export function DeckCards({ deckId, cards }: { deckId: number; cards: CardRow[] 
 
   return (
     <>
-      {cards.map((card) => (
-        <div
-          key={card.id}
-          className="flex items-start justify-between gap-3 border-b py-3 [content-visibility:auto] [contain-intrinsic-size:auto_4.5rem]"
-        >
+      {cards.map((card, index) => (
+        <div key={card.id}>
+          {card.suspended && (index === 0 || !cards[index - 1].suspended) ? (
+            <div id="otlozhennye" className="flex scroll-mt-16 flex-col gap-3 pt-5 pb-1">
+              <div>
+                <h3 className="text-sm font-medium">Отложенные</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Эти карточки исключены из повторения, пока вы их не вернёте.
+                </p>
+              </div>
+              <SuspendedDeckActions deckId={deckId} />
+            </div>
+          ) : null}
+          <div className="flex items-start justify-between gap-3 border-b py-3 [content-visibility:auto] [contain-intrinsic-size:auto_4.5rem]">
           <div className="min-w-0">
             <Link href={`/decks/${deckId}/cards/${card.id}`} prefetch={false} className="font-medium">
               {card.preview}
@@ -66,6 +76,7 @@ export function DeckCards({ deckId, cards }: { deckId: number; cards: CardRow[] 
               label="Удалить"
               message="Удалить карточку?"
             />
+          </div>
           </div>
         </div>
       ))}

@@ -1,29 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { ArchiveRestore, Pause } from "lucide-react";
+import { ArchiveRestore, Play } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { unsuspendDeck } from "@/lib/actions";
 import { cn } from "@/lib/utils";
 
-export function SuspendedDeckActions({ deckId, count }: { deckId: number; count: number }) {
-  if (count === 0) return null;
-
+export function SuspendedDeckActions({ deckId }: { deckId: number }) {
   const cellClass = cn(
     buttonVariants({ variant: "outline" }),
     "h-full min-h-16 w-full flex-col gap-1 whitespace-normal px-2 py-2 text-center leading-tight",
   );
 
   return (
-    <section className="flex flex-col gap-3 rounded-xl bg-card p-4 ring-1 ring-foreground/10">
-      <div>
-        <h2 className="text-sm font-medium">Отложенные</h2>
-        <p className="mt-1 text-sm text-muted-foreground">Сейчас {deferredLabel(count)}</p>
-      </div>
-      <div className="grid grid-cols-2 gap-2">
+    <div className="grid grid-cols-2 gap-2">
       <Link href={`/decks/${deckId}/review?suspended=1`} className={cellClass}>
-        <Pause />
+        <Play />
         Повторять отложенные
       </Link>
       <Dialog>
@@ -48,15 +41,28 @@ export function SuspendedDeckActions({ deckId, count }: { deckId: number; count:
           </form>
         </DialogContent>
       </Dialog>
-      </div>
-    </section>
+    </div>
   );
 }
 
-function deferredLabel(count: number) {
-  const mod10 = count % 10;
-  const mod100 = count % 100;
-  if (mod10 === 1 && mod100 !== 11) return `${count} отложенная`;
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${count} отложенные`;
-  return `${count} отложенных`;
+export function DeckListSummary({ total, suspended }: { total: number; suspended: number }) {
+  return (
+    <div>
+      <h2 className="text-sm font-medium text-muted-foreground">Карточки</h2>
+      <p className="mt-1 text-sm">
+        в колоде {total}/
+        {suspended > 0 ? (
+          <button
+            type="button"
+            className="cursor-pointer underline"
+            onClick={() => document.getElementById("otlozhennye")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+          >
+            отложенных {suspended}
+          </button>
+        ) : (
+          <span>отложенных {suspended}</span>
+        )}
+      </p>
+    </div>
+  );
 }
