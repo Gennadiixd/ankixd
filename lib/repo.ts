@@ -517,7 +517,7 @@ export async function getDeckPage(deckId: number) {
                LIMIT 1) AS preview
        FROM cards c
        WHERE c.deck_id = ?
-       ORDER BY c.id`,
+       ORDER BY c.suspended, c.id`,
     )
     .all(deckId) as { id: number; state: number; suspended: number; dueAt: string; preview: string | null }[];
   const tagMap = loadTags(rows.map((row) => row.id));
