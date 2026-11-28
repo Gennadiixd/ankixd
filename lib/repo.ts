@@ -615,6 +615,36 @@ export async function getReviewSession(deckId: number, tags: string[], suspended
   };
 }
 
+export async function getFolderReviewSession(folderId: number) {
+  const userId = await requireUserId();
+  const folder = getDb()
+    .prepare(`SELECT id, name FROM folders WHERE id = ? AND user_id = ?`)
+    .get(folderId, userId) as FolderItem | undefined;
+  if (!folder) return null;
+  const now = new Date().toISOString();
+  const order = `ORDER BY CASE c.state WHEN 1 THEN 0 WHEN 3 THEN 0 WHEN 2 THEN 1 ELSE 2 END, c.due_at, c.id`;
+  const rows = getDb()
+    .prepare(
+      `SELECT c.id, c.deck_id AS deckId
+       FROM cards c
+       JOIN decks d ON d.id = c.deck_id
+       WHERE d.folder_id = ? AND d.user_id = ? AND c.suspended = 0 AND c.due_at <= ?
+       ${order}`,
+    )
+    .all(folder.id, userId, now) as { id: number; deckId: number }[];
+  const deckIds = [...new Set(rows.map((row) => row.deckId))];
+  const fieldsByDeck = new Map(deckIds.map((id) => [id, listFieldRows(id)]));
+  const values = loadValues(rows.map((row) => row.id));
+  const tagMap = loadTags(rows.map((row) => row.id));
+  const cards: SessionCard[] = rows.map((row) => ({
+    id: row.id,
+    front: projectFields(fieldsByDeck.get(row.deckId) ?? [], values.get(row.id) ?? new Map(), "front"),
+    back: projectFields(fieldsByDeck.get(row.deckId) ?? [], values.get(row.id) ?? new Map(), "back"),
+    tags: tagMap.get(row.id) ?? [],
+  }));
+  return { folder, cards };
+}
+
 export async function setCardSuspended(cardId: number, suspended: boolean) {
   const card = await requireCard(cardId);
   getDb()

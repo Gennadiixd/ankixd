@@ -69,6 +69,14 @@ async function HomeBody({
             name={folder.name}
             actions={
               <>
+                <Link
+                  href={`/folders/${folder.id}/review`}
+                  className={cn(buttonVariants({ variant: "outline", size: "icon" }))}
+                  aria-label="Повторять папку"
+                  title="Повторять папку"
+                >
+                  <Play />
+                </Link>
                 <RenameFolderDialog id={folder.id} name={folder.name} />
                 <ConfirmForm
                   action={deleteFolder}

@@ -19,12 +19,18 @@ export function ReviewSession({
   tagLabel,
   initialCards,
   suspended = false,
+  titleHref = `/decks/${deckId}`,
+  doneHref = `/decks/${deckId}`,
+  doneLabel = "К колоде",
 }: {
   deckId: number;
   deckName: string;
   tagLabel?: string;
   initialCards: SessionCard[];
   suspended?: boolean;
+  titleHref?: string;
+  doneHref?: string;
+  doneLabel?: string;
 }) {
   const [queue, setQueue] = useState(initialCards);
   const [deferred, setDeferred] = useState<{ dueAt: number; card: SessionCard }[]>([]);
@@ -176,7 +182,7 @@ export function ReviewSession({
     <div className="mx-auto flex min-h-full w-full max-w-lg flex-col gap-5 px-4 py-6">
       <header className="flex items-start justify-between gap-3">
         <div>
-          <Link href={`/decks/${deckId}`} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+          <Link href={titleHref} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
             <Layers className="size-4 shrink-0" aria-hidden />
             {deckName}
           </Link>
@@ -186,7 +192,7 @@ export function ReviewSession({
           </p>
         </div>
         {current ? (
-          <Link href={`/decks/${deckId}`} className={cn(buttonVariants({ variant: "outline" }), "h-9 shrink-0")}>
+          <Link href="/" className={cn(buttonVariants({ variant: "outline" }), "h-9 shrink-0")}>
             Закончить
           </Link>
         ) : null}
@@ -287,8 +293,8 @@ export function ReviewSession({
           ) : (
             <p className="text-sm text-muted-foreground">В этой очереди карточек больше нет.</p>
           )}
-          <Link href={`/decks/${deckId}`} className={cn(buttonVariants(), "h-10")}>
-            К колоде
+          <Link href={doneHref} className={cn(buttonVariants(), "h-10")}>
+            {doneLabel}
           </Link>
         </div>
       )}
